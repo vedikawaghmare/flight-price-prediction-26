@@ -2,7 +2,8 @@ name: Daily flight scrape
 
 on:
     schedule:
-        - cron: "30 3 * * *"
+        - cron: "30 9 * * *"
+          timezone: "Asia/Kolkata"
     workflow_dispatch:
 
 permissions:
