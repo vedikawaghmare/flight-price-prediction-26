@@ -86,17 +86,24 @@ def main():
     for origin, dest in ROUTES:
         for d in DAYS_AHEAD:
             flight_date = (today + timedelta(days=d)).isoformat()
-            try:
-                query, currency = build_query(flight_date, origin, dest)
-                results = get_flights(query) or []
-                for f in results:
-                    try:
-                        rows.append(flight_to_row(f, scraped_at, flight_date, d, origin, dest, currency))
-                    except Exception as e:
-                        failures.append(f"Bad row {origin}-{dest} {flight_date}: {e}")
-                print(f"{origin}-{dest} {flight_date}: {len(results)} options")
-            except Exception as e:
-                failures.append(f"Search failed {origin}-{dest} {flight_date}: {e}")
+
+            for attempt in range(2):          # try up to 2 times
+                try:
+                    query, currency = build_query(flight_date, origin, dest)
+                    results = get_flights(query) or []
+                    for f in results:
+                        try:
+                            rows.append(flight_to_row(f, scraped_at, flight_date, d, origin, dest, currency))
+                        except Exception as e:
+                            failures.append(f"Bad row {origin}-{dest} {flight_date}: {e}")
+                    print(f"{origin}-{dest} {flight_date}: {len(results)} options")
+                    break                      # success, stop retrying
+                except Exception as e:
+                    if attempt == 0:
+                        print(f"Retrying {origin}-{dest} {flight_date}...")
+                        time.sleep(30)         # wait a bit, then try once more
+                    else:
+                        failures.append(f"Search failed {origin}-{dest} {flight_date}: {e}")
 
             time.sleep(random.uniform(5, 12))   # be polite between searches
 
@@ -109,7 +116,7 @@ def main():
         print(f"{len(failures)} problems:")
         for msg in failures:
             print("  ", msg)
-
+            
 
 if __name__ == "__main__":
     main()
